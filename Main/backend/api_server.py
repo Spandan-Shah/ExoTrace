@@ -1,10 +1,12 @@
 from pathlib import Path
 import sys
+import json
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+
 
 BASE_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = BASE_DIR.parent
@@ -18,16 +20,19 @@ from step13_predict_one_lightcurve import (
     predict_lightcurve,
     convert_to_builtin_types,
 )
+
 from step18_plot_utils import generate_prediction_plots
 
 
 DATASET_INDEX = BASE_DIR / "data" / "dataset_index.csv"
-RESULTS_DIR = BASE_DIR / "outputs" / "results"
 OUTPUTS_DIR = BASE_DIR / "outputs"
-PLOTS_DIR = BASE_DIR / "outputs" / "plots"
+RESULTS_DIR = OUTPUTS_DIR / "results"
+PLOTS_DIR = OUTPUTS_DIR / "plots"
 
 OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+
 app = FastAPI(
     title="ExoTrace API",
     description="AI-enabled exoplanet transit detection API",
@@ -48,6 +53,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Serve backend output files like plots
 app.mount("/static", StaticFiles(directory=str(OUTPUTS_DIR)), name="static")
 
 MODEL_CACHE = None
@@ -95,7 +101,6 @@ def list_targets(limit: int = 20):
     df = pd.read_csv(DATASET_INDEX)
 
     records = df[["tic_id", "label", "file_path"]].head(limit).to_dict(orient="records")
-
     class_counts = df["label"].value_counts().to_dict()
 
     return {
@@ -146,7 +151,7 @@ def list_targets_by_label(label: str, limit: int = 20):
 @app.get("/api/predict/{tic_id}")
 def predict_by_tic(tic_id: str):
     """
-    Runs full prediction for one TIC ID.
+    Runs full prediction for one TIC ID and generates plot URLs for frontend.
     """
     try:
         model, feature_columns, labels, model_name = get_cached_model()
@@ -165,7 +170,22 @@ def predict_by_tic(tic_id: str):
 
         result = convert_to_builtin_types(result)
 
+        plot_files = generate_prediction_plots(
+            file_path=file_path,
+            tic_id=result["tic_id"],
+            true_label=result["true_label"],
+            features=result["features"],
+        )
+
+        result["plot_urls"] = {
+            name: f"/static/plots/{path.name}"
+            for name, path in plot_files.items()
+        }
+
         output_file = RESULTS_DIR / f"TIC_{result['tic_id']}_prediction.json"
+
+        with open(output_file, "w") as f:
+            json.dump(result, f, indent=4)
 
         return {
             "status": "success",
@@ -203,6 +223,7 @@ def project_summary():
             "Feature extraction",
             "ML classification",
             "Prediction JSON generation",
+            "Dashboard plot generation",
         ],
         "model": {
             "name": "ExtraTrees",
