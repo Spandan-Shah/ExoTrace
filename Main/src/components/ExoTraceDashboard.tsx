@@ -7,6 +7,8 @@ import { CandidateExplorer } from "./CandidateExplorer";
 import { ModelExplanationPanel } from "./ModelExplanationPanel";
 import { PerformanceReportPanel } from "./PerformanceReportPanel";
 import { DashboardQuickNav } from "./DashboardQuickNav";
+import { PipelinePosterPanel } from "./PipelinePosterPanel";
+import { BackendHealthPanel } from "./BackendHealthPanel";
 import {
   PredictionHistoryPanel,
   type PredictionHistoryItem,
@@ -186,7 +188,9 @@ export function ExoTraceDashboard() {
         reportSummary={reportSummary}
         topCandidates={topCandidates}
         />
+        <PipelinePosterPanel />
 
+        <BackendHealthPanel />
       <PerformanceReportPanel />
 
       <ModelExplanationPanel />
