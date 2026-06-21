@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
+
 import { LightCurvePlots } from "./LightCurvePlots";
 import { DemoGuidePanel } from "./DemoGuidePanel";
-
 import { CandidateExplorer } from "./CandidateExplorer";
 import { ModelExplanationPanel } from "./ModelExplanationPanel";
 import { PerformanceReportPanel } from "./PerformanceReportPanel";
 import { DashboardQuickNav } from "./DashboardQuickNav";
+import {
+  PredictionHistoryPanel,
+  type PredictionHistoryItem,
+} from "./PredictionHistoryPanel";
 
 import {
   getSummary,
@@ -33,6 +37,9 @@ export function ExoTraceDashboard() {
   const [topCandidates, setTopCandidates] = useState<CandidateRecord[]>([]);
   const [targets, setTargets] = useState<Target[]>([]);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
+  const [predictionHistory, setPredictionHistory] = useState<
+    PredictionHistoryItem[]
+  >([]);
   const [selectedTic, setSelectedTic] = useState("146172354");
   const [selectedLabel, setSelectedLabel] = useState("planet");
   const [error, setError] = useState<string | null>(null);
@@ -66,16 +73,46 @@ export function ExoTraceDashboard() {
     await loadDashboardData(label);
   }
 
+  function addPredictionToHistory(ticId: string, result: PredictionResult) {
+    const now = new Date();
+
+    const item: PredictionHistoryItem = {
+      ticId,
+      trueLabel: result.true_label,
+      predictedLabel: result.predicted_label,
+      decision: result.decision,
+      planetProbability:
+        result.planet_probability ?? result.class_probabilities?.planet,
+      confidence: result.confidence,
+      isPlanetCandidate: result.is_planet_candidate,
+      candidatePriority: result.candidate_priority,
+      timestamp: now.toLocaleTimeString(),
+    };
+
+    setPredictionHistory((previous) => {
+      const withoutDuplicate = previous.filter(
+        (entry) => entry.ticId !== item.ticId
+      );
+
+      return [item, ...withoutDuplicate].slice(0, 10);
+    });
+  }
+
   async function runPrediction(ticId?: string | number) {
     try {
       setLoading(true);
       setError(null);
 
       const id = ticId ?? selectedTic;
-      setSelectedTic(String(id));
+      const idString = String(id);
+
+      setSelectedTic(idString);
 
       const predictionData = await predictByTic(id);
-      setPrediction(predictionData.result);
+      const result = predictionData.result;
+
+      setPrediction(result);
+      addPredictionToHistory(idString, result);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown prediction error");
     } finally {
@@ -135,11 +172,21 @@ export function ExoTraceDashboard() {
 
       {error && <div style={styles.errorBox}>{error}</div>}
 
+      <DashboardQuickNav />
+
       <DemoGuidePanel onRunPrediction={(ticId) => runPrediction(ticId)} />
-        <DashboardQuickNav />
-        <PerformanceReportPanel />
-        <ModelExplanationPanel />
-        <CandidateExplorer />
+
+      <PredictionHistoryPanel
+        history={predictionHistory}
+        onRunAgain={(ticId) => runPrediction(ticId)}
+        onClear={() => setPredictionHistory([])}
+      />
+
+      <PerformanceReportPanel />
+
+      <ModelExplanationPanel />
+
+      <CandidateExplorer />
 
       <section style={styles.grid}>
         <div style={styles.metricCard}>
@@ -243,6 +290,7 @@ export function ExoTraceDashboard() {
                   .true_positive_planets ?? "-"
               )}
             />
+
             <ReportBox
               label="True Non-planets"
               value={String(
@@ -250,6 +298,7 @@ export function ExoTraceDashboard() {
                   "-"
               )}
             />
+
             <ReportBox
               label="Candidate Precision"
               value={
@@ -260,6 +309,7 @@ export function ExoTraceDashboard() {
                   : "-"
               }
             />
+
             <ReportBox
               label="Candidate F1"
               value={
@@ -322,7 +372,7 @@ export function ExoTraceDashboard() {
           </div>
         </div>
 
-        <div style={styles.panel}>
+        <div id="prediction-section" style={styles.panel}>
           <h2 style={styles.panelTitle}>Run Transit Prediction</h2>
           <p style={styles.panelSubtitle}>
             Enter a TIC ID from the dataset and run the trained ExoTrace
@@ -416,22 +466,27 @@ export function ExoTraceDashboard() {
                   label="Period"
                   value={`${prediction.features.period_days.toFixed(4)} d`}
                 />
+
                 <Feature
                   label="Duration"
                   value={`${prediction.features.duration_hours.toFixed(2)} h`}
                 />
+
                 <Feature
                   label="Depth"
                   value={`${prediction.features.depth_percent.toFixed(4)}%`}
                 />
+
                 <Feature
                   label="SNR"
                   value={prediction.features.snr.toFixed(2)}
                 />
+
                 <Feature
                   label="BLS Power"
                   value={prediction.features.bls_power.toFixed(4)}
                 />
+
                 <Feature
                   label="Transits"
                   value={String(prediction.features.n_detected_transits)}
@@ -472,7 +527,7 @@ export function ExoTraceDashboard() {
         </div>
       </section>
 
-      <section style={styles.topCandidatesPanel}>
+      <section id="top-candidates-section" style={styles.topCandidatesPanel}>
         <div style={styles.panelHeader}>
           <div>
             <h2 style={styles.panelTitle}>Top Planet Candidates</h2>
@@ -517,9 +572,7 @@ export function ExoTraceDashboard() {
                     {candidate.depth_percent.toFixed(4)}%
                   </td>
                   <td style={styles.td}>{candidate.snr.toFixed(2)}</td>
-                  <td style={styles.td}>
-                    {candidate.n_detected_transits}
-                  </td>
+                  <td style={styles.td}>{candidate.n_detected_transits}</td>
                 </tr>
               ))}
             </tbody>
@@ -566,6 +619,7 @@ const styles: Record<string, CSSProperties> = {
     gap: "24px",
     alignItems: "flex-start",
     marginBottom: "28px",
+    flexWrap: "wrap",
   },
   eyebrow: {
     color: "#7dd3fc",
@@ -603,7 +657,7 @@ const styles: Record<string, CSSProperties> = {
   },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: "16px",
     marginBottom: "20px",
   },
@@ -629,7 +683,7 @@ const styles: Record<string, CSSProperties> = {
   },
   mainGrid: {
     display: "grid",
-    gridTemplateColumns: "0.95fr 1.35fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
     gap: "20px",
   },
   panel: {
@@ -651,6 +705,8 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: "14px",
+    flexWrap: "wrap",
   },
   panelTitle: {
     margin: 0,
@@ -662,14 +718,14 @@ const styles: Record<string, CSSProperties> = {
   },
   classGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))",
     gap: "10px",
     marginTop: "18px",
     marginBottom: "24px",
   },
   reportGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: "10px",
     marginBottom: "22px",
   },
@@ -721,6 +777,7 @@ const styles: Record<string, CSSProperties> = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: "10px",
     background: "rgba(255,255,255,0.07)",
     color: "#e5edf7",
     border: "1px solid rgba(255,255,255,0.1)",
@@ -740,9 +797,11 @@ const styles: Record<string, CSSProperties> = {
     gap: "10px",
     marginTop: "18px",
     marginBottom: "18px",
+    flexWrap: "wrap",
   },
   input: {
     flex: 1,
+    minWidth: "220px",
     padding: "13px 14px",
     borderRadius: "12px",
     border: "1px solid rgba(255,255,255,0.14)",
@@ -770,6 +829,7 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: "space-between",
     gap: "16px",
     alignItems: "center",
+    flexWrap: "wrap",
   },
   predictedLabel: {
     margin: "8px 0",
@@ -806,7 +866,7 @@ const styles: Record<string, CSSProperties> = {
   },
   resultGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
     gap: "12px",
     marginTop: "20px",
   },
@@ -826,7 +886,7 @@ const styles: Record<string, CSSProperties> = {
   },
   featureGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
     gap: "10px",
   },
   featureBox: {
@@ -886,12 +946,14 @@ const styles: Record<string, CSSProperties> = {
     fontSize: "13px",
     padding: "12px",
     borderBottom: "1px solid rgba(255,255,255,0.15)",
+    whiteSpace: "nowrap",
   },
   td: {
     padding: "12px",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
     color: "#e5edf7",
     fontSize: "13px",
+    whiteSpace: "nowrap",
   },
   priorityBadge: {
     display: "inline-block",
