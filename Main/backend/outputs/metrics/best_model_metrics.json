@@ -1,5 +1,11 @@
 {
-    "accuracy": 0.76,
+    "best_model": "ExtraTrees",
+    "accuracy": 0.78,
+    "macro_f1": 0.7712998712998713,
+    "weighted_f1": 0.7684401544401545,
+    "planet_recall": 0.5294117647058824,
+    "false_positive_recall": 0.8235294117647058,
+    "eclipsing_binary_recall": 1.0,
     "labels": [
         "eclipsing_binary",
         "false_positive",
@@ -30,5 +36,5 @@
         "false_positive": 50,
         "eclipsing_binary": 50
     },
-    "note": "This is a first baseline model trained on a small 30-sample dataset. Increase data size for final evaluation."
+    "note": "Best model selected using macro F1 with planet recall as additional priority."
 }

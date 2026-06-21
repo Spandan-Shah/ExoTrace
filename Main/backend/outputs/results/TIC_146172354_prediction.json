@@ -1,0 +1,33 @@
+{
+    "tic_id": "146172354",
+    "true_label": "planet",
+    "predicted_label": "planet",
+    "decision": "Possible planet candidate",
+    "confidence": 0.4927857548073364,
+    "planet_probability": 0.4927857548073364,
+    "class_probabilities": {
+        "eclipsing_binary": 0.12437429172967415,
+        "false_positive": 0.38283995346299005,
+        "planet": 0.4927857548073364
+    },
+    "model_name": "ExtraTrees",
+    "features": {
+        "period_days": 3.7800268830689907,
+        "duration_days": 0.129,
+        "duration_hours": 3.096,
+        "transit_time": 2285.0472506039223,
+        "depth": 0.0018977735808103358,
+        "depth_percent": 0.18977735808103358,
+        "snr": 16.1097773870155,
+        "bls_power": 0.0011186526636028263,
+        "n_points_used": 18475,
+        "n_in_transit_points": 666,
+        "n_detected_transits": 6,
+        "odd_even_depth_difference": 0.00041144126721837093,
+        "secondary_eclipse_depth": -9.504939541371549e-05,
+        "v_shape_score": 0.0006857186453919084,
+        "baseline_days": 23.82227310171811,
+        "period_search_min_days": 0.5,
+        "period_search_max_days": 11.911136550859055
+    }
+}
