@@ -6,14 +6,25 @@ import {
   getSummary,
   getTargetsByLabel,
   predictByTic,
+  getFullReportSummary,
+  getTopCandidates,
+} from "../lib/api";
+
+import type {
   SummaryResponse,
   Target,
   PredictionResult,
+  FullReportSummary,
+  CandidateRecord,
 } from "../lib/api";
 
 export function ExoTraceDashboard() {
   const [loading, setLoading] = useState(false);
   const [summary, setSummary] = useState<SummaryResponse | null>(null);
+  const [reportSummary, setReportSummary] = useState<FullReportSummary | null>(
+    null
+  );
+  const [topCandidates, setTopCandidates] = useState<CandidateRecord[]>([]);
   const [targets, setTargets] = useState<Target[]>([]);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [selectedTic, setSelectedTic] = useState("146172354");
@@ -25,11 +36,18 @@ export function ExoTraceDashboard() {
       setLoading(true);
       setError(null);
 
-      const summaryData = await getSummary();
-      const targetsData = await getTargetsByLabel(label, 12);
+      const [summaryData, targetsData, reportData, topCandidateData] =
+        await Promise.all([
+          getSummary(),
+          getTargetsByLabel(label, 12),
+          getFullReportSummary(),
+          getTopCandidates(10),
+        ]);
 
       setSummary(summaryData);
       setTargets(targetsData.targets);
+      setReportSummary(reportData.summary);
+      setTopCandidates(topCandidateData.candidates);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown API error");
     } finally {
@@ -76,6 +94,20 @@ export function ExoTraceDashboard() {
       ? Math.round(prediction.planet_threshold * 100)
       : null;
 
+  const fullAccuracy = reportSummary
+    ? formatPercent(reportSummary.classification_metrics.accuracy)
+    : "-";
+
+  const candidateRecall = reportSummary
+    ? formatPercent(reportSummary.candidate_screening_metrics.recall)
+    : "-";
+
+  const missedPlanets =
+    reportSummary?.candidate_screening_metrics.missed_planets ?? "-";
+
+  const falseAlerts =
+    reportSummary?.candidate_screening_metrics.false_planet_alerts ?? "-";
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -83,8 +115,9 @@ export function ExoTraceDashboard() {
           <p style={styles.eyebrow}>AI-enabled Exoplanet Transit Detection</p>
           <h1 style={styles.title}>ExoTrace</h1>
           <p style={styles.subtitle}>
-            Detecting possible exoplanet transits from noisy TESS light curves using BLS features,
-            optimized planet-candidate thresholding, and machine learning.
+            Detecting possible exoplanet transits from noisy TESS light curves
+            using BLS features, optimized planet-candidate thresholding, and
+            machine learning.
           </p>
         </div>
 
@@ -106,25 +139,51 @@ export function ExoTraceDashboard() {
         </div>
 
         <div style={styles.metricCard}>
+          <p style={styles.metricLabel}>Full Batch Accuracy</p>
+          <h2 style={styles.metricValue}>{fullAccuracy}</h2>
+          <p style={styles.metricNote}>All 150 predictions</p>
+        </div>
+
+        <div style={styles.metricCard}>
+          <p style={styles.metricLabel}>Candidate Recall</p>
+          <h2 style={styles.metricValue}>{candidateRecall}</h2>
+          <p style={styles.metricNote}>Planet screening recall</p>
+        </div>
+
+        <div style={styles.metricCard}>
+          <p style={styles.metricLabel}>Missed Planets</p>
+          <h2 style={styles.metricValue}>{missedPlanets}</h2>
+          <p style={styles.metricNote}>Out of 50 planet examples</p>
+        </div>
+      </section>
+
+      <section style={styles.grid}>
+        <div style={styles.metricCard}>
           <p style={styles.metricLabel}>Best Model</p>
           <h2 style={styles.metricValue}>{summary?.model.name ?? "-"}</h2>
-          <p style={styles.metricNote}>Selected by macro F1</p>
+          <p style={styles.metricNote}>ExtraTrees classifier</p>
         </div>
 
         <div style={styles.metricCard}>
-          <p style={styles.metricLabel}>Accuracy</p>
+          <p style={styles.metricLabel}>Test Split Accuracy</p>
           <h2 style={styles.metricValue}>
-            {summary ? `${(summary.model.accuracy * 100).toFixed(1)}%` : "-"}
+            {summary ? formatPercent(summary.model.accuracy) : "-"}
           </h2>
-          <p style={styles.metricNote}>Test split performance</p>
+          <p style={styles.metricNote}>Held-out split metric</p>
         </div>
 
         <div style={styles.metricCard}>
-          <p style={styles.metricLabel}>Macro F1</p>
+          <p style={styles.metricLabel}>False Alerts</p>
+          <h2 style={styles.metricValue}>{falseAlerts}</h2>
+          <p style={styles.metricNote}>Non-planets flagged for review</p>
+        </div>
+
+        <div style={styles.metricCard}>
+          <p style={styles.metricLabel}>High Priority</p>
           <h2 style={styles.metricValue}>
-            {summary ? `${(summary.model.macro_f1 * 100).toFixed(1)}%` : "-"}
+            {reportSummary?.high_priority_candidate_count ?? "-"}
           </h2>
-          <p style={styles.metricNote}>Balanced class metric</p>
+          <p style={styles.metricNote}>Strong planet candidates</p>
         </div>
       </section>
 
@@ -160,6 +219,43 @@ export function ExoTraceDashboard() {
                 {summary?.dataset.class_counts.eclipsing_binary ?? "-"}
               </h3>
             </div>
+          </div>
+
+          <h3 style={styles.smallHeading}>Candidate Screening Report</h3>
+
+          <div style={styles.reportGrid}>
+            <ReportBox
+              label="True Positive Planets"
+              value={String(
+                reportSummary?.candidate_screening_metrics
+                  .true_positive_planets ?? "-"
+              )}
+            />
+            <ReportBox
+              label="True Non-planets"
+              value={String(
+                reportSummary?.candidate_screening_metrics.true_non_planets ??
+                  "-"
+              )}
+            />
+            <ReportBox
+              label="Candidate Precision"
+              value={
+                reportSummary
+                  ? formatPercent(
+                      reportSummary.candidate_screening_metrics.precision
+                    )
+                  : "-"
+              }
+            />
+            <ReportBox
+              label="Candidate F1"
+              value={
+                reportSummary
+                  ? formatPercent(reportSummary.candidate_screening_metrics.f1)
+                  : "-"
+              }
+            />
           </div>
 
           <h3 style={styles.smallHeading}>Available Targets</h3>
@@ -217,7 +313,8 @@ export function ExoTraceDashboard() {
         <div style={styles.panel}>
           <h2 style={styles.panelTitle}>Run Transit Prediction</h2>
           <p style={styles.panelSubtitle}>
-            Enter a TIC ID from the dataset and run the trained ExoTrace classifier.
+            Enter a TIC ID from the dataset and run the trained ExoTrace
+            classifier.
           </p>
 
           <div style={styles.inputRow}>
@@ -258,7 +355,8 @@ export function ExoTraceDashboard() {
                   <strong>{planetProbability}%</strong>
                   <span>planet</span>
                   <small>
-                    threshold {planetThreshold !== null ? `${planetThreshold}%` : "N/A"}
+                    threshold{" "}
+                    {planetThreshold !== null ? `${planetThreshold}%` : "N/A"}
                   </small>
                 </div>
               </div>
@@ -361,6 +459,61 @@ export function ExoTraceDashboard() {
           )}
         </div>
       </section>
+
+      <section style={styles.topCandidatesPanel}>
+        <div style={styles.panelHeader}>
+          <div>
+            <h2 style={styles.panelTitle}>Top Planet Candidates</h2>
+            <p style={styles.panelSubtitle}>
+              Highest ranked candidate predictions from the full batch report.
+            </p>
+          </div>
+        </div>
+
+        <div style={styles.tableWrapper}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>TIC ID</th>
+                <th style={styles.th}>Decision</th>
+                <th style={styles.th}>Priority</th>
+                <th style={styles.th}>Planet Prob.</th>
+                <th style={styles.th}>Period</th>
+                <th style={styles.th}>Depth</th>
+                <th style={styles.th}>SNR</th>
+                <th style={styles.th}>Transits</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {topCandidates.map((candidate) => (
+                <tr key={candidate.tic_id}>
+                  <td style={styles.td}>TIC {candidate.tic_id}</td>
+                  <td style={styles.td}>{candidate.decision}</td>
+                  <td style={styles.td}>
+                    <span style={styles.priorityBadge}>
+                      {candidate.candidate_priority}
+                    </span>
+                  </td>
+                  <td style={styles.td}>
+                    {formatPercent(candidate.planet_probability)}
+                  </td>
+                  <td style={styles.td}>
+                    {candidate.period_days.toFixed(4)} d
+                  </td>
+                  <td style={styles.td}>
+                    {candidate.depth_percent.toFixed(4)}%
+                  </td>
+                  <td style={styles.td}>{candidate.snr.toFixed(2)}</td>
+                  <td style={styles.td}>
+                    {candidate.n_detected_transits}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
@@ -372,6 +525,19 @@ function Feature({ label, value }: { label: string; value: string }) {
       <p style={styles.resultValue}>{value}</p>
     </div>
   );
+}
+
+function ReportBox({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={styles.classBox}>
+      <p style={styles.classLabel}>{label}</p>
+      <h3 style={styles.classValue}>{value}</h3>
+    </div>
+  );
+}
+
+function formatPercent(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
 }
 
 const styles: Record<string, CSSProperties> = {
@@ -461,6 +627,14 @@ const styles: Record<string, CSSProperties> = {
     padding: "22px",
     boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
   },
+  topCandidatesPanel: {
+    background: "rgba(255,255,255,0.07)",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: "24px",
+    padding: "22px",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+    marginTop: "20px",
+  },
   panelHeader: {
     display: "flex",
     justifyContent: "space-between",
@@ -480,6 +654,12 @@ const styles: Record<string, CSSProperties> = {
     gap: "10px",
     marginTop: "18px",
     marginBottom: "24px",
+  },
+  reportGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "10px",
+    marginBottom: "22px",
   },
   classBox: {
     background: "rgba(0,0,0,0.22)",
@@ -678,5 +858,36 @@ const styles: Record<string, CSSProperties> = {
     padding: "14px",
     borderRadius: "14px",
     marginBottom: "18px",
+  },
+  tableWrapper: {
+    overflowX: "auto",
+    marginTop: "18px",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    minWidth: "900px",
+  },
+  th: {
+    textAlign: "left",
+    color: "#bae6fd",
+    fontSize: "13px",
+    padding: "12px",
+    borderBottom: "1px solid rgba(255,255,255,0.15)",
+  },
+  td: {
+    padding: "12px",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    color: "#e5edf7",
+    fontSize: "13px",
+  },
+  priorityBadge: {
+    display: "inline-block",
+    background: "rgba(56,189,248,0.14)",
+    color: "#7dd3fc",
+    border: "1px solid rgba(56,189,248,0.30)",
+    borderRadius: "999px",
+    padding: "4px 8px",
+    fontWeight: 700,
   },
 };
