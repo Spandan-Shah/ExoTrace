@@ -38,7 +38,7 @@ export function LightCurvePlots({ plotUrls }: { plotUrls?: PlotUrls }) {
       <div style={styles.grid}>
         {plots.map((plot) => (
           <div key={plot.title} style={styles.card}>
-            <h4 style={styles.title}>{plot.title}</h4>
+           
 
             <img
               src={`${API_BASE_URL}${plot.url}`}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-
+import { LightCurvePlots } from "./LightCurvePlots";
 import {
   getSummary,
   getTargetsByLabel,
@@ -320,6 +320,8 @@ export function ExoTraceDashboard() {
                   )
                 )}
               </div>
+
+              <LightCurvePlots plotUrls={prediction.plot_urls} />
             </div>
           ) : (
             <div style={styles.emptyState}>
