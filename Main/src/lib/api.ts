@@ -71,6 +71,12 @@ export type PredictionResult = {
   decision: string;
   confidence: number;
   planet_probability: number;
+
+  planet_threshold?: number;
+  threshold_source?: string;
+  is_planet_candidate?: boolean;
+  candidate_priority?: string;
+
   class_probabilities: Record<string, number>;
   model_name: string;
   features: PredictionFeatures;
