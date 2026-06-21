@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
+
 import {
   getSummary,
-  getTargets,
+  getTargetsByLabel,
   predictByTic,
   SummaryResponse,
   Target,
@@ -14,15 +16,16 @@ export function ExoTraceDashboard() {
   const [targets, setTargets] = useState<Target[]>([]);
   const [prediction, setPrediction] = useState<PredictionResult | null>(null);
   const [selectedTic, setSelectedTic] = useState("146172354");
+  const [selectedLabel, setSelectedLabel] = useState("planet");
   const [error, setError] = useState<string | null>(null);
 
-  async function loadDashboardData() {
+  async function loadDashboardData(label = selectedLabel) {
     try {
       setLoading(true);
       setError(null);
 
       const summaryData = await getSummary();
-      const targetsData = await getTargets(12);
+      const targetsData = await getTargetsByLabel(label, 12);
 
       setSummary(summaryData);
       setTargets(targetsData.targets);
@@ -31,6 +34,11 @@ export function ExoTraceDashboard() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function changeTargetLabel(label: string) {
+    setSelectedLabel(label);
+    await loadDashboardData(label);
   }
 
   async function runPrediction(ticId?: string | number) {
@@ -51,7 +59,7 @@ export function ExoTraceDashboard() {
   }
 
   useEffect(() => {
-    loadDashboardData();
+    loadDashboardData("planet");
   }, []);
 
   const planetProbability = prediction
@@ -118,28 +126,72 @@ export function ExoTraceDashboard() {
           <div style={styles.panelHeader}>
             <div>
               <h2 style={styles.panelTitle}>Dataset Overview</h2>
-              <p style={styles.panelSubtitle}>Three-class light curve classification dataset</p>
+              <p style={styles.panelSubtitle}>
+                Three-class light curve classification dataset
+              </p>
             </div>
           </div>
 
           <div style={styles.classGrid}>
             <div style={styles.classBox}>
               <p style={styles.classLabel}>Planet</p>
-              <h3 style={styles.classValue}>{summary?.dataset.class_counts.planet ?? "-"}</h3>
+              <h3 style={styles.classValue}>
+                {summary?.dataset.class_counts.planet ?? "-"}
+              </h3>
             </div>
 
             <div style={styles.classBox}>
               <p style={styles.classLabel}>False Positive</p>
-              <h3 style={styles.classValue}>{summary?.dataset.class_counts.false_positive ?? "-"}</h3>
+              <h3 style={styles.classValue}>
+                {summary?.dataset.class_counts.false_positive ?? "-"}
+              </h3>
             </div>
 
             <div style={styles.classBox}>
               <p style={styles.classLabel}>Eclipsing Binary</p>
-              <h3 style={styles.classValue}>{summary?.dataset.class_counts.eclipsing_binary ?? "-"}</h3>
+              <h3 style={styles.classValue}>
+                {summary?.dataset.class_counts.eclipsing_binary ?? "-"}
+              </h3>
             </div>
           </div>
 
           <h3 style={styles.smallHeading}>Available Targets</h3>
+
+          <div style={styles.filterRow}>
+            <button
+              style={{
+                ...styles.filterButton,
+                ...(selectedLabel === "planet" ? styles.activeFilterButton : {}),
+              }}
+              onClick={() => changeTargetLabel("planet")}
+            >
+              Planet
+            </button>
+
+            <button
+              style={{
+                ...styles.filterButton,
+                ...(selectedLabel === "false_positive"
+                  ? styles.activeFilterButton
+                  : {}),
+              }}
+              onClick={() => changeTargetLabel("false_positive")}
+            >
+              False Positive
+            </button>
+
+            <button
+              style={{
+                ...styles.filterButton,
+                ...(selectedLabel === "eclipsing_binary"
+                  ? styles.activeFilterButton
+                  : {}),
+              }}
+              onClick={() => changeTargetLabel("eclipsing_binary")}
+            >
+              Eclipsing Binary
+            </button>
+          </div>
 
           <div style={styles.targetList}>
             {targets.map((target) => (
@@ -183,7 +235,9 @@ export function ExoTraceDashboard() {
               <div style={styles.predictionHeader}>
                 <div>
                   <p style={styles.metricLabel}>Prediction Result</p>
-                  <h2 style={styles.predictedLabel}>{prediction.predicted_label}</h2>
+                  <h2 style={styles.predictedLabel}>
+                    {prediction.predicted_label}
+                  </h2>
                   <p style={styles.decision}>{prediction.decision}</p>
                 </div>
 
@@ -218,31 +272,53 @@ export function ExoTraceDashboard() {
               <h3 style={styles.smallHeading}>Transit Features</h3>
 
               <div style={styles.featureGrid}>
-                <Feature label="Period" value={`${prediction.features.period_days.toFixed(4)} d`} />
-                <Feature label="Duration" value={`${prediction.features.duration_hours.toFixed(2)} h`} />
-                <Feature label="Depth" value={`${prediction.features.depth_percent.toFixed(4)}%`} />
-                <Feature label="SNR" value={prediction.features.snr.toFixed(2)} />
-                <Feature label="BLS Power" value={prediction.features.bls_power.toFixed(4)} />
-                <Feature label="Transits" value={String(prediction.features.n_detected_transits)} />
+                <Feature
+                  label="Period"
+                  value={`${prediction.features.period_days.toFixed(4)} d`}
+                />
+                <Feature
+                  label="Duration"
+                  value={`${prediction.features.duration_hours.toFixed(2)} h`}
+                />
+                <Feature
+                  label="Depth"
+                  value={`${prediction.features.depth_percent.toFixed(4)}%`}
+                />
+                <Feature
+                  label="SNR"
+                  value={prediction.features.snr.toFixed(2)}
+                />
+                <Feature
+                  label="BLS Power"
+                  value={prediction.features.bls_power.toFixed(4)}
+                />
+                <Feature
+                  label="Transits"
+                  value={String(prediction.features.n_detected_transits)}
+                />
               </div>
 
               <h3 style={styles.smallHeading}>Class Probabilities</h3>
 
               <div style={styles.probabilityList}>
-                {Object.entries(prediction.class_probabilities).map(([label, probability]) => (
-                  <div key={label} style={styles.probabilityRow}>
-                    <span>{label}</span>
-                    <div style={styles.probabilityTrack}>
-                      <div
-                        style={{
-                          ...styles.probabilityFill,
-                          width: `${Math.round(probability * 100)}%`,
-                        }}
-                      />
+                {Object.entries(prediction.class_probabilities).map(
+                  ([label, probability]) => (
+                    <div key={label} style={styles.probabilityRow}>
+                      <span>{label}</span>
+
+                      <div style={styles.probabilityTrack}>
+                        <div
+                          style={{
+                            ...styles.probabilityFill,
+                            width: `${Math.round(probability * 100)}%`,
+                          }}
+                        />
+                      </div>
+
+                      <strong>{(probability * 100).toFixed(1)}%</strong>
                     </div>
-                    <strong>{(probability * 100).toFixed(1)}%</strong>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </div>
           ) : (
@@ -265,7 +341,7 @@ function Feature({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles: Record<string, React.CSSProperties> = {
+const styles: Record<string, CSSProperties> = {
   page: {
     minHeight: "100vh",
     background: "linear-gradient(135deg, #08111f 0%, #101a32 50%, #0b1020 100%)",
@@ -389,6 +465,25 @@ const styles: Record<string, React.CSSProperties> = {
   smallHeading: {
     marginTop: "20px",
     marginBottom: "12px",
+  },
+  filterRow: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "12px",
+    flexWrap: "wrap",
+  },
+  filterButton: {
+    background: "rgba(255,255,255,0.07)",
+    color: "#dbeafe",
+    border: "1px solid rgba(255,255,255,0.14)",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    cursor: "pointer",
+    fontWeight: 600,
+  },
+  activeFilterButton: {
+    background: "#38bdf8",
+    color: "#06111f",
   },
   targetList: {
     display: "flex",

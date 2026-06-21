@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ApiConnectionTest } from "../components/ApiConnectionTest";
+import { ExoTraceDashboard } from "../components/ExoTraceDashboard";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
-  return <ApiConnectionTest />;
+  return <ExoTraceDashboard />;
 }
