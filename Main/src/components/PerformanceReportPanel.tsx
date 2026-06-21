@@ -95,7 +95,7 @@ export function PerformanceReportPanel() {
   }));
 
   return (
-    <section style={styles.panel}>
+    <section id="performance-report" style={styles.panel}>
       <div style={styles.header}>
         <p style={styles.eyebrow}>Evaluation</p>
         <h2 style={styles.title}>Performance Report</h2>

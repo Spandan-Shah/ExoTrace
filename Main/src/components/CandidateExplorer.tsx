@@ -228,7 +228,7 @@ export function CandidateExplorer() {
   ).length;
 
   return (
-    <section style={styles.panel}>
+    <section id="candidate-explorer" style={styles.panel}>
       <div style={styles.headerRow}>
         <div>
           <p style={styles.eyebrow}>Full Batch Explorer</p>

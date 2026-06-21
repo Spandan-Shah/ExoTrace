@@ -59,7 +59,7 @@ const features: FeatureCard[] = [
 
 export function ModelExplanationPanel() {
   return (
-    <section style={styles.panel}>
+    <section id="model-explanation" style={styles.panel}>
       <div style={styles.header}>
         <p style={styles.eyebrow}>Explainable AI</p>
         <h2 style={styles.title}>Model Explanation</h2>

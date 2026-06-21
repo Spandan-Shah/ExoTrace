@@ -40,7 +40,7 @@ const demoTargets: DemoTarget[] = [
 
 export function DemoGuidePanel({ onRunPrediction }: DemoGuidePanelProps) {
   return (
-    <section style={styles.panel}>
+    <section id="demo-panel" style={styles.panel}>
       <div style={styles.headerRow}>
         <div>
           <p style={styles.eyebrow}>Presentation Mode</p>
