@@ -1,0 +1,15 @@
+{
+    "best_period_days": 3.78078237777417,
+    "best_duration_days": 0.129,
+    "best_duration_hours": 3.096,
+    "transit_time": 2285.044250603922,
+    "depth": 0.0015871097621357189,
+    "depth_percent": 0.15871097621357189,
+    "snr": 30.343596189964885,
+    "bls_power": 0.0041722668102313195,
+    "confidence": 0.99,
+    "n_points": 92371,
+    "n_in_transit_points": 3339,
+    "period_search_min_days": 0.5,
+    "period_search_max_days": 11.911136550859055
+}
