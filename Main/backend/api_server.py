@@ -18,6 +18,7 @@ from step13_predict_one_lightcurve import (
     predict_lightcurve,
     convert_to_builtin_types,
 )
+from step18_plot_utils import generate_prediction_plots
 
 
 DATASET_INDEX = BASE_DIR / "data" / "dataset_index.csv"
