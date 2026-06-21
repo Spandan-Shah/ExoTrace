@@ -5,6 +5,7 @@ import { DemoGuidePanel } from "./DemoGuidePanel";
 
 import { CandidateExplorer } from "./CandidateExplorer";
 import { ModelExplanationPanel } from "./ModelExplanationPanel";
+import { PerformanceReportPanel } from "./PerformanceReportPanel";
 
 import {
   getSummary,
@@ -134,6 +135,7 @@ export function ExoTraceDashboard() {
       {error && <div style={styles.errorBox}>{error}</div>}
 
       <DemoGuidePanel onRunPrediction={(ticId) => runPrediction(ticId)} />
+        <PerformanceReportPanel />
         <ModelExplanationPanel />
         <CandidateExplorer />
 
