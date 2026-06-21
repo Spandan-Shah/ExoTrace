@@ -23,7 +23,11 @@ from step18_plot_utils import generate_prediction_plots
 
 DATASET_INDEX = BASE_DIR / "data" / "dataset_index.csv"
 RESULTS_DIR = BASE_DIR / "outputs" / "results"
+OUTPUTS_DIR = BASE_DIR / "outputs"
+PLOTS_DIR = BASE_DIR / "outputs" / "plots"
 
+OUTPUTS_DIR.mkdir(parents=True, exist_ok=True)
+PLOTS_DIR.mkdir(parents=True, exist_ok=True)
 app = FastAPI(
     title="ExoTrace API",
     description="AI-enabled exoplanet transit detection API",
