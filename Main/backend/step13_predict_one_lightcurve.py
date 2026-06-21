@@ -17,6 +17,7 @@ PROJECT_ROOT = BASE_DIR.parent
 
 DATASET_INDEX = BASE_DIR / "data" / "dataset_index.csv"
 MODEL_FILE = BASE_DIR / "models" / "best_exotrace_classifier.joblib"
+THRESHOLD_FILE = BASE_DIR / "models" / "planet_threshold.json"
 RESULTS_DIR = BASE_DIR / "outputs" / "results"
 
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
@@ -62,6 +63,26 @@ def load_model():
     print(f"Labels: {labels}")
 
     return model, feature_columns, labels, model_name
+
+
+def load_planet_threshold():
+    """
+    Loads optimized planet probability threshold.
+    If file does not exist, fallback threshold is 0.40.
+    """
+    if not THRESHOLD_FILE.exists():
+        return {
+            "selected_threshold": 0.40,
+            "source": "fallback",
+            "note": "planet_threshold.json not found. Using fallback threshold.",
+        }
+
+    with open(THRESHOLD_FILE, "r") as f:
+        threshold_data = json.load(f)
+
+    threshold_data["source"] = "optimized"
+
+    return threshold_data
 
 
 def get_lightcurve_from_dataset(tic_id=None):
@@ -115,10 +136,36 @@ def get_lightcurve_from_file(file_arg):
     return file_path, tic_id, true_label
 
 
+def make_candidate_decision(predicted_label, planet_probability, confidence, threshold):
+    """
+    Converts ML output into a science-friendly candidate decision.
+    """
+
+    is_planet_candidate = planet_probability >= threshold
+
+    if planet_probability >= 0.60:
+        decision = "Strong planet candidate"
+        candidate_priority = "high"
+    elif is_planet_candidate:
+        decision = "Possible planet candidate"
+        candidate_priority = "medium"
+    elif predicted_label == "eclipsing_binary":
+        decision = "Likely eclipsing binary"
+        candidate_priority = "low"
+    elif predicted_label == "false_positive":
+        decision = "Likely false positive"
+        candidate_priority = "low"
+    else:
+        decision = "Uncertain"
+        candidate_priority = "review"
+
+    return decision, is_planet_candidate, candidate_priority
+
+
 def predict_lightcurve(file_path, tic_id, true_label, model, feature_columns, labels, model_name):
     """
     Runs full inference:
-    clean -> detrend -> BLS features -> ML prediction.
+    clean -> detrend -> BLS features -> ML prediction -> threshold decision.
     """
     print("\nInput light curve:")
     print(f"TIC ID: {tic_id}")
@@ -145,16 +192,15 @@ def predict_lightcurve(file_path, tic_id, true_label, model, feature_columns, la
     confidence = float(max(probabilities.values())) if probabilities else None
     planet_probability = float(probabilities.get("planet", 0.0))
 
-    if predicted_label == "planet" and planet_probability >= 0.60:
-        decision = "Strong planet candidate"
-    elif planet_probability >= 0.40:
-        decision = "Possible planet candidate"
-    elif predicted_label == "eclipsing_binary":
-        decision = "Likely eclipsing binary"
-    elif predicted_label == "false_positive":
-        decision = "Likely false positive"
-    else:
-        decision = "Uncertain"
+    threshold_data = load_planet_threshold()
+    planet_threshold = float(threshold_data.get("selected_threshold", 0.40))
+
+    decision, is_planet_candidate, candidate_priority = make_candidate_decision(
+        predicted_label=predicted_label,
+        planet_probability=planet_probability,
+        confidence=confidence,
+        threshold=planet_threshold,
+    )
 
     result = {
         "tic_id": tic_id,
@@ -165,6 +211,12 @@ def predict_lightcurve(file_path, tic_id, true_label, model, feature_columns, la
         "planet_probability": planet_probability,
         "class_probabilities": probabilities,
         "model_name": model_name,
+
+        "planet_threshold": planet_threshold,
+        "threshold_source": threshold_data.get("source", "unknown"),
+        "is_planet_candidate": is_planet_candidate,
+        "candidate_priority": candidate_priority,
+
         "features": features,
     }
 
@@ -178,6 +230,9 @@ def print_prediction_summary(result):
     print(f"True label: {result['true_label']}")
     print(f"Predicted label: {result['predicted_label']}")
     print(f"Decision: {result['decision']}")
+    print(f"Candidate priority: {result['candidate_priority']}")
+    print(f"Is planet candidate: {result['is_planet_candidate']}")
+    print(f"Planet threshold: {result['planet_threshold']}")
 
     if result["confidence"] is not None:
         print(f"Confidence: {result['confidence']:.3f}")
@@ -248,7 +303,7 @@ def main():
     print("\nPrediction JSON saved to:")
     print(output_file)
 
-    print("\nStep 13 completed successfully.")
+    print("\nStep 20 completed successfully.")
 
 
 if __name__ == "__main__":
