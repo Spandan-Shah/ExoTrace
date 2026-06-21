@@ -3,6 +3,8 @@ import type { CSSProperties } from "react";
 import { LightCurvePlots } from "./LightCurvePlots";
 import { DemoGuidePanel } from "./DemoGuidePanel";
 
+import { CandidateExplorer } from "./CandidateExplorer";
+
 import {
   getSummary,
   getTargetsByLabel,
@@ -131,6 +133,7 @@ export function ExoTraceDashboard() {
       {error && <div style={styles.errorBox}>{error}</div>}
 
       <DemoGuidePanel onRunPrediction={(ticId) => runPrediction(ticId)} />
+        <CandidateExplorer />
 
       <section style={styles.grid}>
         <div style={styles.metricCard}>
