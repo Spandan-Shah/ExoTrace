@@ -50,7 +50,7 @@ export function BackendHealthPanel() {
   const isOnline = health?.status === "ok";
 
   return (
-    <section style={styles.panel}>
+    <section id="backend-health" style={styles.panel}>
       <div style={styles.headerRow}>
         <div>
           <p style={styles.eyebrow}>System Status</p>

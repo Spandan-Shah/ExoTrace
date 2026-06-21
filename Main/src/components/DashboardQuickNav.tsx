@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
 
 const navItems = [
+  { label: "Health", target: "backend-health" },
   { label: "Demo", target: "demo-panel" },
+  { label: "Pipeline", target: "pipeline-poster" },
   { label: "History", target: "prediction-history" },
   { label: "Reports", target: "report-tools" },
   { label: "Performance", target: "performance-report" },
