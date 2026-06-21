@@ -48,6 +48,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount("/static", StaticFiles(directory=str(OUTPUTS_DIR)), name="static")
+
 MODEL_CACHE = None
 
 
