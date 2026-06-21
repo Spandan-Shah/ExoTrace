@@ -1,33 +1,35 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 
-import { LightCurvePlots } from "./LightCurvePlots";
-import { DemoGuidePanel } from "./DemoGuidePanel";
+import { BackendHealthPanel } from "./BackendHealthPanel";
 import { CandidateExplorer } from "./CandidateExplorer";
+import { DashboardQuickNav } from "./DashboardQuickNav";
+import { DemoGuidePanel } from "./DemoGuidePanel";
+
+import { LightCurvePlots } from "./LightCurvePlots";
 import { ModelExplanationPanel } from "./ModelExplanationPanel";
 import { PerformanceReportPanel } from "./PerformanceReportPanel";
-import { DashboardQuickNav } from "./DashboardQuickNav";
 import { PipelinePosterPanel } from "./PipelinePosterPanel";
-import { BackendHealthPanel } from "./BackendHealthPanel";
 import {
   PredictionHistoryPanel,
   type PredictionHistoryItem,
 } from "./PredictionHistoryPanel";
 import { ReportToolsPanel } from "./ReportToolsPanel";
+
 import {
+  getFullReportSummary,
   getSummary,
   getTargetsByLabel,
-  predictByTic,
-  getFullReportSummary,
   getTopCandidates,
+  predictByTic,
 } from "../lib/api";
 
 import type {
+  CandidateRecord,
+  FullReportSummary,
+  PredictionResult,
   SummaryResponse,
   Target,
-  PredictionResult,
-  FullReportSummary,
-  CandidateRecord,
 } from "../lib/api";
 
 export function ExoTraceDashboard() {
@@ -42,6 +44,7 @@ export function ExoTraceDashboard() {
   const [predictionHistory, setPredictionHistory] = useState<
     PredictionHistoryItem[]
   >([]);
+  const [judgeMode, setJudgeMode] = useState(false);
   const [selectedTic, setSelectedTic] = useState("146172354");
   const [selectedLabel, setSelectedLabel] = useState("planet");
   const [error, setError] = useState<string | null>(null);
@@ -130,9 +133,7 @@ export function ExoTraceDashboard() {
     ? Math.round(prediction.planet_probability * 100)
     : 0;
 
-  const confidence = prediction
-    ? Math.round(prediction.confidence * 100)
-    : 0;
+  const confidence = prediction ? Math.round(prediction.confidence * 100) : 0;
 
   const planetThreshold =
     prediction?.planet_threshold !== undefined
@@ -158,7 +159,9 @@ export function ExoTraceDashboard() {
       <header style={styles.header}>
         <div>
           <p style={styles.eyebrow}>AI-enabled Exoplanet Transit Detection</p>
+
           <h1 style={styles.title}>ExoTrace</h1>
+
           <p style={styles.subtitle}>
             Detecting possible exoplanet transits from noisy TESS light curves
             using BLS features, optimized planet-candidate thresholding, and
@@ -176,26 +179,33 @@ export function ExoTraceDashboard() {
 
       <DashboardQuickNav />
 
+
+
+      <BackendHealthPanel />
+
       <DemoGuidePanel onRunPrediction={(ticId) => runPrediction(ticId)} />
 
-      <PredictionHistoryPanel
-        history={predictionHistory}
-        onRunAgain={(ticId) => runPrediction(ticId)}
-        onClear={() => setPredictionHistory([])}
-      />
-        <ReportToolsPanel
+      <PipelinePosterPanel />
+
+      {!judgeMode && (
+        <PredictionHistoryPanel
+          history={predictionHistory}
+          onRunAgain={(ticId) => runPrediction(ticId)}
+          onClear={() => setPredictionHistory([])}
+        />
+      )}
+
+      <ReportToolsPanel
         prediction={prediction}
         reportSummary={reportSummary}
         topCandidates={topCandidates}
-        />
-        <PipelinePosterPanel />
+      />
 
-        <BackendHealthPanel />
-      <PerformanceReportPanel />
+      {!judgeMode && <PerformanceReportPanel />}
 
-      <ModelExplanationPanel />
+      {!judgeMode && <ModelExplanationPanel />}
 
-      <CandidateExplorer />
+      {!judgeMode && <CandidateExplorer />}
 
       <section style={styles.grid}>
         <div style={styles.metricCard}>
@@ -260,6 +270,7 @@ export function ExoTraceDashboard() {
           <div style={styles.panelHeader}>
             <div>
               <h2 style={styles.panelTitle}>Dataset Overview</h2>
+
               <p style={styles.panelSubtitle}>
                 Three-class light curve classification dataset.
               </p>
@@ -383,6 +394,7 @@ export function ExoTraceDashboard() {
 
         <div id="prediction-section" style={styles.panel}>
           <h2 style={styles.panelTitle}>Run Transit Prediction</h2>
+
           <p style={styles.panelSubtitle}>
             Enter a TIC ID from the dataset and run the trained ExoTrace
             classifier.
@@ -410,9 +422,11 @@ export function ExoTraceDashboard() {
               <div style={styles.predictionHeader}>
                 <div>
                   <p style={styles.metricLabel}>Prediction Result</p>
+
                   <h2 style={styles.predictedLabel}>
                     {prediction.predicted_label}
                   </h2>
+
                   <p style={styles.decision}>{prediction.decision}</p>
 
                   <div style={styles.candidatePill}>
@@ -540,6 +554,7 @@ export function ExoTraceDashboard() {
         <div style={styles.panelHeader}>
           <div>
             <h2 style={styles.panelTitle}>Top Planet Candidates</h2>
+
             <p style={styles.panelSubtitle}>
               Highest ranked candidate predictions from the full batch report.
             </p>
