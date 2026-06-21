@@ -11,7 +11,7 @@ import {
   PredictionHistoryPanel,
   type PredictionHistoryItem,
 } from "./PredictionHistoryPanel";
-
+import { ReportToolsPanel } from "./ReportToolsPanel";
 import {
   getSummary,
   getTargetsByLabel,
@@ -181,6 +181,11 @@ export function ExoTraceDashboard() {
         onRunAgain={(ticId) => runPrediction(ticId)}
         onClear={() => setPredictionHistory([])}
       />
+        <ReportToolsPanel
+        prediction={prediction}
+        reportSummary={reportSummary}
+        topCandidates={topCandidates}
+        />
 
       <PerformanceReportPanel />
 

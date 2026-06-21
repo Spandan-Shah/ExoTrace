@@ -2,6 +2,8 @@ import type { CSSProperties } from "react";
 
 const navItems = [
   { label: "Demo", target: "demo-panel" },
+  { label: "History", target: "prediction-history" },
+  { label: "Reports", target: "report-tools" },
   { label: "Performance", target: "performance-report" },
   { label: "Model", target: "model-explanation" },
   { label: "Explorer", target: "candidate-explorer" },
