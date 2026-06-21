@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { LightCurvePlots } from "./LightCurvePlots";
+import { DemoGuidePanel } from "./DemoGuidePanel";
 
 import {
   getSummary,
@@ -128,6 +129,8 @@ export function ExoTraceDashboard() {
       </header>
 
       {error && <div style={styles.errorBox}>{error}</div>}
+
+      <DemoGuidePanel onRunPrediction={(ticId) => runPrediction(ticId)} />
 
       <section style={styles.grid}>
         <div style={styles.metricCard}>
