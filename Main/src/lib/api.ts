@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://127.0.0.1:8000";
+export const API_BASE_URL = "http://127.0.0.1:8000";
 
 export type ClassCounts = {
   planet: number;
@@ -58,6 +58,12 @@ export type PredictionFeatures = {
   period_search_max_days: number;
 };
 
+export type PlotUrls = {
+  normalized?: string;
+  detrended?: string;
+  phase_folded?: string;
+};
+
 export type PredictionResult = {
   tic_id: string;
   true_label: string;
@@ -68,6 +74,7 @@ export type PredictionResult = {
   class_probabilities: Record<string, number>;
   model_name: string;
   features: PredictionFeatures;
+  plot_urls?: PlotUrls;
 };
 
 export type PredictionResponse = {
