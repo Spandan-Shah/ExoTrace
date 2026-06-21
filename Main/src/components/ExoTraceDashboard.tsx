@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 import { LightCurvePlots } from "./LightCurvePlots";
+
 import {
   getSummary,
   getTargetsByLabel,
@@ -70,6 +71,11 @@ export function ExoTraceDashboard() {
     ? Math.round(prediction.confidence * 100)
     : 0;
 
+  const planetThreshold =
+    prediction?.planet_threshold !== undefined
+      ? Math.round(prediction.planet_threshold * 100)
+      : null;
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
@@ -77,7 +83,8 @@ export function ExoTraceDashboard() {
           <p style={styles.eyebrow}>AI-enabled Exoplanet Transit Detection</p>
           <h1 style={styles.title}>ExoTrace</h1>
           <p style={styles.subtitle}>
-            Detecting possible exoplanet transits from noisy TESS light curves using BLS features and machine learning.
+            Detecting possible exoplanet transits from noisy TESS light curves using BLS features,
+            optimized planet-candidate thresholding, and machine learning.
           </p>
         </div>
 
@@ -127,7 +134,7 @@ export function ExoTraceDashboard() {
             <div>
               <h2 style={styles.panelTitle}>Dataset Overview</h2>
               <p style={styles.panelSubtitle}>
-                Three-class light curve classification dataset
+                Three-class light curve classification dataset.
               </p>
             </div>
           </div>
@@ -239,33 +246,56 @@ export function ExoTraceDashboard() {
                     {prediction.predicted_label}
                   </h2>
                   <p style={styles.decision}>{prediction.decision}</p>
+
+                  <div style={styles.candidatePill}>
+                    Candidate: {prediction.is_planet_candidate ? "Yes" : "No"}
+                    {" · "}
+                    Priority: {prediction.candidate_priority ?? "review"}
+                  </div>
                 </div>
 
                 <div style={styles.probCircle}>
                   <strong>{planetProbability}%</strong>
                   <span>planet</span>
+                  <small>
+                    threshold {planetThreshold !== null ? `${planetThreshold}%` : "N/A"}
+                  </small>
                 </div>
               </div>
 
               <div style={styles.resultGrid}>
-                <div>
+                <div style={styles.resultBox}>
                   <p style={styles.resultLabel}>TIC ID</p>
                   <p style={styles.resultValue}>{prediction.tic_id}</p>
                 </div>
 
-                <div>
+                <div style={styles.resultBox}>
                   <p style={styles.resultLabel}>True Label</p>
                   <p style={styles.resultValue}>{prediction.true_label}</p>
                 </div>
 
-                <div>
+                <div style={styles.resultBox}>
                   <p style={styles.resultLabel}>Confidence</p>
                   <p style={styles.resultValue}>{confidence}%</p>
                 </div>
 
-                <div>
+                <div style={styles.resultBox}>
                   <p style={styles.resultLabel}>Model</p>
                   <p style={styles.resultValue}>{prediction.model_name}</p>
+                </div>
+
+                <div style={styles.resultBox}>
+                  <p style={styles.resultLabel}>Candidate</p>
+                  <p style={styles.resultValue}>
+                    {prediction.is_planet_candidate ? "Yes" : "No"}
+                  </p>
+                </div>
+
+                <div style={styles.resultBox}>
+                  <p style={styles.resultLabel}>Priority</p>
+                  <p style={styles.resultValue}>
+                    {prediction.candidate_priority ?? "review"}
+                  </p>
                 </div>
               </div>
 
@@ -325,7 +355,8 @@ export function ExoTraceDashboard() {
             </div>
           ) : (
             <div style={styles.emptyState}>
-              Run a prediction to see the classification, transit features, and probability scores.
+              Run a prediction to see the classification, candidate decision,
+              transit features, probability scores, and light curve plots.
             </div>
           )}
         </div>
@@ -371,7 +402,7 @@ const styles: Record<string, CSSProperties> = {
     lineHeight: 1,
   },
   subtitle: {
-    maxWidth: "760px",
+    maxWidth: "780px",
     color: "#b8c7dc",
     fontSize: "16px",
     lineHeight: 1.6,
@@ -557,9 +588,20 @@ const styles: Record<string, CSSProperties> = {
     color: "#bae6fd",
     margin: 0,
   },
+  candidatePill: {
+    display: "inline-block",
+    marginTop: "12px",
+    background: "rgba(56,189,248,0.14)",
+    border: "1px solid rgba(56,189,248,0.35)",
+    color: "#bae6fd",
+    padding: "8px 12px",
+    borderRadius: "999px",
+    fontSize: "13px",
+    fontWeight: 700,
+  },
   probCircle: {
-    width: "104px",
-    height: "104px",
+    width: "118px",
+    height: "118px",
     borderRadius: "50%",
     border: "8px solid rgba(56,189,248,0.65)",
     display: "flex",
@@ -567,12 +609,19 @@ const styles: Record<string, CSSProperties> = {
     justifyContent: "center",
     flexDirection: "column",
     background: "rgba(56,189,248,0.10)",
+    textAlign: "center",
+    gap: "2px",
   },
   resultGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(4, 1fr)",
+    gridTemplateColumns: "repeat(3, 1fr)",
     gap: "12px",
     marginTop: "20px",
+  },
+  resultBox: {
+    background: "rgba(255,255,255,0.06)",
+    borderRadius: "14px",
+    padding: "12px",
   },
   resultLabel: {
     color: "#9fb1c9",
